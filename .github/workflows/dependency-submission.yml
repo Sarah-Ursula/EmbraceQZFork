@@ -1,0 +1,36 @@
+name: Java dependency graph
+
+# Dependabot only reads the npm files in this repo, so the Java libraries in the Gradle build,
+# which are what ships (the QZ library that Cloud Print uses), were never checked for known flaws (ES-300046846).
+# This sends the resolved Gradle runtime dependencies of the shipped modules to GitHub's
+# dependency graph, so Dependabot raises alerts for them like it does for npm.
+# The same workflow runs in ECommerceConnector (ES-300046825).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dependency-submission:
+    name: Submit Gradle dependencies
+    # the same runner and Java version as this repo's Gradle test jobs
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Only the runtime classpath of the shipped modules: build and test tools are left out,
+      # so the alerts are about what is installed.
+      - name: Submit the dependency graph
+        uses: gradle/actions/dependency-submission@v4
+        with:
+          dependency-graph-include-configurations: runtimeClasspath
